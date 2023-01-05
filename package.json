@@ -1,0 +1,32 @@
+{
+  "name": "uraniumjs",
+  "version": "1.0.0",
+  "description": "ENRICH a text into a simple and compressed BASE92 readable string & DEPLETE it back! It uses LZ4...",
+  "dependencies": {},
+  "devDependencies": {},
+  "build": {},
+  "scripts": {},
+  "author": "Affolter Matias",
+  "keywords": [
+    "uranium", "js", "uraniumjs",
+    "enrich", "deplete", "string",
+    "base conversion", "inline",
+    "parse", "stringify",
+    "base92", "base64",
+    "base92 encode", "base92 decode",
+    "base92_encode", "base92_decode",
+    "encode", "decode",
+    "compress", "decompress",
+    "compress string", "decompress string",
+    "LZ4", "LZ4 compression", "LZ4 decompression" ,"LZ",
+    "UTF8", "UTF-8", "UTF16", "UTF-16le"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pixa-pics/UraniumJS.git"
+  },
+  "engines": {
+    "node": ">=0.8.0"
+  }
+}

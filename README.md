@@ -1,4 +1,4 @@
-# UraniumJS - LZ4 & Base92
+# UraniumJS :radioactive: - LZ4 & Base92 :heavy_check_mark:	
 
 ![UraniumJS branding logo](https://raw.githubusercontent.com/pixa-pics/UraniumJS/main/Branding.png)
 
@@ -6,6 +6,17 @@
 > Only 53.5 KB, yet it enables you to save up to 45% on any "UTF-8" and "UTF-16le" source text... 
 
 DEMO : https://codepen.io/vipertechofficial/pen/JjBXJPR
+
+### 1) E-A-S-Y!
+LZ4 is a very fast (Truly, trust me.) compression algorithm but when it comes to the idea of compressing a very complex string you probably don't want to get a strange and unreadable text which you may even not be able to save it inside a bracket in JavaScript because it could be using insane characters!
+
+### 2) N-E-A-T!
+But look, why would someone with the proper tools beside of him just throw -25% of size inside getting to use an encoding in Base64 if it is to embded it inside JSON or a STRING which can truly handle more likely 92 characters without hurting itself into parsing or readability issues!
+
+### 3) F-A-S-T!
+So, while you might get up to 45% lighter source file for web worker function, you might also be able to embded them directly inside your JS text file and load them quite fast! Or one may be using it to save translation file more kindly inside a .js ...
+
+#### It doesn't use the following characters excepting space / \ " ' ` 
 
 ---
 
@@ -51,6 +62,7 @@ var depleted = UraniumJS.stringDeplete("#K;tD,5o{w!c!)O0.,jkiP6H#A8jY@JMJx2~cw3=
 
 ```JavaScript
 /* STEP 3 --EVAL-- (optional) */
+
 var AsyncFunctionConstructor = Object.getPrototypeOf(async function(){}).constructor;
 var FunctionConstructor = Object.getPrototypeOf(function(){}).constructor;
 

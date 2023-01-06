@@ -1,9 +1,9 @@
-# UraniumJS :radioactive: - LZ4 & Base92 :heavy_check_mark:	
+# UraniumJS :radioactive: - LZ4 :heavy_check_mark: & Base92 :skull: :nine: :two:
 
 ![UraniumJS branding logo](https://raw.githubusercontent.com/pixa-pics/UraniumJS/main/Branding.png)
 
 > ENRICH a text into a simple and compressed BASE92 readable string &amp; DEPLETE it back!
-> Only 53.5 KB, yet it enables you to save up to 45% on any "UTF-8" and "UTF-16le" source text... 
+> Only 20.5 KB, yet it enables you to save up to 45% on any "UTF-8" and "UTF-16le" source text... 
 
 DEMO : https://codepen.io/vipertechofficial/pen/JjBXJPR
 

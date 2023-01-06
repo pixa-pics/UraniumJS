@@ -1,4 +1,4 @@
-# UraniumJS :radioactive: - LZ4 :heavy_check_mark: & Base92 :skull: :nine: :two:
+# UraniumJS :radioactive: - LZP3 & LZJBR :heavy_check_mark: --> Base92 :skull: :nine: :two:
 
 ![UraniumJS branding logo](https://raw.githubusercontent.com/pixa-pics/UraniumJS/main/Branding.png)
 

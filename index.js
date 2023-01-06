@@ -22,27 +22,35 @@
 * SOFTWARE.
 */
 
-var UraniumJS = function(data){
+var UraniumJS = function(data, base){
 
     if (!(this instanceof UraniumJS)) {
         return new UraniumJS(data);
     }
 
-    if(data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
+    base = base || "UNKNOWN";
+    base = base.toUpperCase();
 
-        this.storage_input_ =  data;
-    }else if(typeof data == "string") {
+    if(base != "BASE64") {
+        if(data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
 
-        this.storage_input_ =  UraniumJS.UTF8.toByteArray(data);
-    }else if("buffer" in data || data instanceof ArrayBuffer) {
+            this.storage_input_ =  data;
+        }else if(typeof data == "string") {
 
-        this.storage_input_ =  new Uint8Array(data instanceof ArrayBuffer ? data : data.buffer);
-    }else if(data instanceof Object){
+            this.storage_input_ =  UraniumJS.UTF8.toUint8Array(data);
+        }else if(typeof data.buffer != "undefined" || data instanceof ArrayBuffer) {
 
-        this.storage_input_ = Cbor(data).run();
+            this.storage_input_ =  new Uint8Array(data instanceof ArrayBuffer ? data : data.buffer);
+        }else {
+
+            this.storage_input_ =  Uint8Array.from(data);
+        }
+    }else {
+
+        this.storage_input_ =  UraniumJS.BASE64.toUint8Array(data);
     }
 
-    this.storage_input_length_ = ( this.storage_input_.length | 0 ) >>> 0;
+    this.storage_input_length_ = data.length | 0 ;
 
     this.TILD_CHAR_CODE_ = UraniumJS.config.TILD_CHAR_CODE;
     this.BACKSLASH_CHAR_ = UraniumJS.config.BACKSLASH_CHAR;
@@ -53,6 +61,475 @@ var UraniumJS = function(data){
 
     return this;
 };
+
+
+/*
+ * The MIT License (MIT)
+ * Copyright © 2017 Nicolas Froidure (https://github.com/nfroidure/utf-8)
+ * Copyright © 2022 Affolter Matias
+*/
+
+var UTF8 = function(){
+    if (!(this instanceof UTF8)) {
+        return new UTF8();
+    }
+
+    this.BMC_LENGTH_ = UTF8.config.BMC_LENGTH;
+    this.BMC_CODE_ = UTF8.config.BMC_CODE;
+};
+
+UTF8.config = {};
+UTF8.config.BMC_LENGTH = Uint8Array.of(0b0, 0b1111111, 0b11000000, 0b11100000, 0b11110000);
+UTF8.config.BMC_CODE = Uint32Array.of(0, 128, 2048, 65536, 2097152);
+
+Object.defineProperty(UTF8.prototype, 'BMC_LENGTH_E', {
+    get: function() {
+        return function (i){
+            return this.BMC_LENGTH_[i|0] & 0xFF;
+        };
+    }
+});
+Object.defineProperty(UTF8.prototype, 'BMC_CODE_E', {
+    get: function() {
+        return function (i){
+            return this.BMC_CODE_[i|0] & 0xFFFFFFFF;
+        };
+    }
+});
+
+UTF8.prototype._getCharLength = function(byte) {
+
+    if (this.BMC_LENGTH_E(4) == (byte & this.BMC_LENGTH_E(4))) {
+        return 4;
+    } else if (this.BMC_LENGTH_E(3) == (byte & this.BMC_LENGTH_E(3))) {
+        return 3;
+    } else if (this.BMC_LENGTH_E(2) == (byte & this.BMC_LENGTH_E(2))) {
+        return 2;
+    } else if (byte == (byte & this.BMC_LENGTH_E(1))) {
+        return 1;
+    }else {
+        return 0;
+    }
+};
+UTF8.prototype._getBytesForCharCode = function (cc){
+
+    if (cc < this.BMC_CODE_E(1)) {
+        return 1;
+    } else if (cc < this.BMC_CODE_E(2)) {
+        return 2;
+    } else if (cc < this.BMC_CODE_E(3)) {
+        return 3;
+    } else if (cc < this.BMC_CODE_E(4)) {
+        return 4;
+    }else {
+        throw new Error('CharCode ' + cc + ' cannot be encoded with UTF8.');
+    }
+};
+
+UTF8.prototype._setBytesFromCharCode = function (charCode, bytes, byteOffset, neededBytes) {
+    charCode = charCode | 0;
+    bytes = bytes || [];
+    byteOffset = byteOffset | 0;
+    neededBytes = neededBytes || this._getBytesForCharCode(charCode);
+    // Setting the charCode as it to bytes if the byte length is 1
+    if (1 == neededBytes) {
+        bytes[byteOffset] = charCode;
+    } else {
+        // Computing the first byte
+        bytes[byteOffset++] =
+            (parseInt('1111'.slice(0, neededBytes), 2) << (8 - neededBytes)) +
+            (charCode >>> (--neededBytes * 6));
+        // Computing next bytes
+        for (; neededBytes > 0; ) {
+            bytes[byteOffset++] = ((charCode >>> (--neededBytes * 6)) & 0x3f) | 0x80;
+        }
+    }
+    return bytes;
+};
+
+UTF8.prototype.toUint8Array = function(string, bytes, byteOffset, byteLength, strict) {
+    string = string || '';
+    bytes = bytes || [];
+    byteOffset = byteOffset | 0;
+    byteLength =
+        'number' === typeof byteLength ? byteLength : bytes.byteLength || Infinity;
+    for (var i = 0, j = string.length; i < j; i++) {
+        var neededBytes = this._getBytesForCharCode(string[i].codePointAt(0));
+        if (strict && byteOffset + neededBytes > byteLength) {
+            throw new Error(
+                'Not enought bytes to encode the char "' +
+                string[i] +
+                '" at the offset "' +
+                byteOffset +
+                '".'
+            );
+        }else {
+            this._setBytesFromCharCode(
+                string[i].codePointAt(0),
+                bytes,
+                byteOffset,
+                neededBytes,
+                strict
+            );
+            byteOffset += neededBytes;
+        }
+    }
+    return bytes;
+};
+UTF8.prototype._getCharCode = function(bytes, byteOffset, charLength) {
+    var charCode = 0,
+        mask = '';
+    byteOffset = byteOffset || 0;
+    // validate that the array has at least one byte in it
+    if (bytes.length - byteOffset <= 0) {
+        throw new Error('No more characters remaining in array.');
+    }
+    // Retrieve charLength if not given
+    charLength = charLength || this._getCharLength(bytes[byteOffset]);
+    if (charLength == 0) {
+        throw new Error(
+            bytes[byteOffset].toString(2) +
+            ' is not a significative' +
+            ' byte (offset:' +
+            byteOffset +
+            ').'
+        );
+    }
+    // Return byte value if charlength is 1
+    if (1 === charLength) {
+        return bytes[byteOffset];
+    }
+    // validate that the array has enough bytes to make up this character
+    if (bytes.length - byteOffset < charLength) {
+        throw new Error(
+            'Expected at least ' + charLength + ' bytes remaining in array.'
+        );
+    }
+    // Test UTF8 integrity
+    mask = '00000000'.slice(0, charLength) + 1 + '00000000'.slice(charLength + 1);
+    if (bytes[byteOffset] & parseInt(mask, 2)) {
+        throw Error(
+            'Index ' +
+            byteOffset +
+            ': A ' +
+            charLength +
+            ' bytes' +
+            ' encoded char' +
+            ' cannot encode the ' +
+            (charLength + 1) +
+            'th rank bit to 1.'
+        );
+    }
+    // Reading the first byte
+    mask = '0000'.slice(0, charLength + 1) + '11111111'.slice(charLength + 1);
+    charCode += (bytes[byteOffset] & parseInt(mask, 2)) << (--charLength * 6);
+    // Reading the next bytes
+    while (charLength) {
+        if (
+            0x80 !== (bytes[byteOffset + 1] & 0x80) ||
+            0x40 === (bytes[byteOffset + 1] & 0x40)
+        ) {
+            throw Error(
+                'Index ' +
+                (byteOffset + 1) +
+                ': Next bytes of encoded char' +
+                ' must begin with a "10" bit sequence.'
+            );
+        }
+        charCode += (bytes[++byteOffset] & 0x3f) << (--charLength * 6);
+    }
+    return charCode;
+};
+UTF8.prototype.fromUint8Array = function (bytes, byteOffset, byteLength, strict) {
+    var charLength,
+        chars = [];
+    byteOffset = byteOffset | 0;
+    byteLength =
+        'number' === typeof byteLength
+            ? byteLength
+            : bytes.byteLength || bytes.length;
+    for (; byteOffset < byteLength; byteOffset++) {
+        charLength = this._getCharLength(bytes[byteOffset]);
+        if (byteOffset + charLength > byteLength) {
+            if (strict) {
+                throw Error(
+                    'Index ' +
+                    byteOffset +
+                    ': Found a ' +
+                    charLength +
+                    ' bytes encoded char declaration but only ' +
+                    (byteLength - byteOffset) +
+                    ' bytes are available.'
+                );
+            }
+        } else {
+            chars.push(
+                String.fromCodePoint(this._getCharCode(bytes, byteOffset, charLength, strict))
+            );
+        }
+        byteOffset += charLength - 1;
+    }
+    return chars.join('');
+};
+UTF8.prototype.isNotUTF8 = function (bytes, byteOffset, byteLength) {
+    try {
+        this.fromUint8Array(bytes, byteOffset, byteLength, true);
+    } catch (e) {
+        return true;
+    }
+    return false;
+}
+
+UraniumJS.UTF8 = new UTF8();
+
+/**
+ $Id: Iuppiter.js 3026 2010-06-23 10:03:13Z Bear $
+
+ Copyright (c) 2010 Nuwa Information Co., Ltd, and individual contributors.
+ All rights reserved.
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+ 1. Redistributions of source code must retain the above copyright notice,
+ this list of conditions and the following disclaimer.
+
+ 2. Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in the
+ documentation and/or other materials provided with the distribution.
+
+ 3. Neither the name of Nuwa Information nor the names of its contributors
+ may be used to endorse or promote products derived from this software
+ without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+ $Author: Bear $ (Modified by Matias A.)
+ */
+
+UraniumJS.LZJB = (function () {
+
+    // Constants was used for compress/decompress function.
+    var
+        NBBY = 8,
+        MATCH_BITS = 6,
+        MATCH_MIN = 3,
+        MATCH_MAX = ((1 << MATCH_BITS) + (MATCH_MIN - 1)),
+        OFFSET_MASK = ((1 << (16 - MATCH_BITS)) - 1),
+        LEMPEL_SIZE = 256;
+
+
+    /**
+     * Convert string value to a byte array.
+     *
+     * @param {String} input The input string value.
+     * @return {Array} A byte array from string value.
+     */
+    var toByteArray = function(input) {
+        var b = [], i, unicode;
+        for(i = 0; i < input.length; i++) {
+            unicode = input.charCodeAt(i);
+            // 0x00000000 - 0x0000007f -> 0xxxxxxx
+            if (unicode <= 0x7f) {
+                b.push(unicode);
+                // 0x00000080 - 0x000007ff -> 110xxxxx 10xxxxxx
+            } else if (unicode <= 0x7ff) {
+                b.push((unicode >> 6) | 0xc0);
+                b.push((unicode & 0x3F) | 0x80);
+                // 0x00000800 - 0x0000ffff -> 1110xxxx 10xxxxxx 10xxxxxx
+            } else if (unicode <= 0xffff) {
+                b.push((unicode >> 12) | 0xe0);
+                b.push(((unicode >> 6) & 0x3f) | 0x80);
+                b.push((unicode & 0x3f) | 0x80);
+                // 0x00010000 - 0x001fffff -> 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+            } else {
+                b.push((unicode >> 18) | 0xf0);
+                b.push(((unicode >> 12) & 0x3f) | 0x80);
+                b.push(((unicode >> 6) & 0x3f) | 0x80);
+                b.push((unicode & 0x3f) | 0x80);
+            }
+        }
+
+        return Uint8Array.from(b);
+    }
+
+    /**
+     * Compress string or byte array using fast and efficient algorithm.
+     *
+     * Because of weak of javascript's natural, many compression algorithm
+     * become useless in javascript implementation. The main problem is
+     * performance, even the simple Huffman, LZ77/78 algorithm will take many
+     * many time to operate. We use LZJB algorithm to do that, it suprisingly
+     * fulfills our requirement to compress string fastly and efficiently.
+     *
+     * Our implementation is based on
+     * http://src.opensolaris.org/source/raw/onnv/onnv-gate/
+     * usr/src/uts/common/os/compress.c
+     * It is licensed under CDDL.
+     *
+     * Please note it depends on toByteArray utility function.
+     *
+     * @param {String|Array} input The string or byte array that you want to
+     *                             compress.
+     * @return {Array} Compressed byte array.
+     */
+    var compress = function(input) {
+        var sstart, dstart = [], slen,
+            src = 0, dst = 0,
+            cpy, copymap,
+            copymask = 1 << (NBBY - 1),
+            mlen, offset,
+            hp,
+            lempel = new Uint32Array(LEMPEL_SIZE).fill(3435973836), // Initialize lempel array.
+            i, bytes;
+
+        // Using byte array or not.
+        if(typeof input.buffer != "undefined") {
+            sstart = input;
+            bytes = true;
+        } else {
+            sstart = toByteArray(input);
+            bytes = false;
+        }
+
+        slen = sstart.length;
+
+        while (src < slen) {
+            if ((copymask <<= 1) == (1 << NBBY)) {
+                if (dst >= slen - 1 - 2 * NBBY) {
+                    mlen = slen;
+                    for (src = 0, dst = 0; mlen; mlen--)
+                        dstart[dst++] = sstart[src++];
+                    return dstart;
+                }
+                copymask = 1;
+                copymap = dst;
+                dstart[dst++] = 0;
+            }
+            if (src > slen - MATCH_MAX) {
+                dstart[dst++] = sstart[src++];
+                continue;
+            }
+            hp = ((sstart[src] + 13) ^
+                    (sstart[src + 1] - 13) ^
+                    sstart[src + 2]) &
+                (LEMPEL_SIZE - 1);
+            offset = (src - lempel[hp]) & OFFSET_MASK;
+            lempel[hp] = src;
+            cpy = src - offset;
+            if (cpy >= 0 && cpy != src &&
+                sstart[src] == sstart[cpy] &&
+                sstart[src + 1] == sstart[cpy + 1] &&
+                sstart[src + 2] == sstart[cpy + 2]) {
+                dstart[copymap] |= copymask;
+                for (mlen = MATCH_MIN; mlen < MATCH_MAX; mlen++)
+                    if (sstart[src + mlen] != sstart[cpy + mlen])
+                        break;
+                dstart[dst++] = ((mlen - MATCH_MIN) << (NBBY - MATCH_BITS)) |
+                    (offset >> NBBY);
+                dstart[dst++] = offset;
+                src += mlen;
+            } else {
+                dstart[dst++] = sstart[src++];
+            }
+        }
+
+        return Uint8Array.from(dstart);
+    };
+
+    /**
+     * Decompress string or byte array using fast and efficient algorithm.
+     *
+     * Our implementation is based on
+     * http://src.opensolaris.org/source/raw/onnv/onnv-gate/
+     * usr/src/uts/common/os/compress.c
+     * It is licensed under CDDL.
+     *
+     * Please note it depends on toByteArray utility function.
+     *
+     * @param {String|Array} input The string or byte array that you want to
+     *                             compress.
+     * @param {Boolean} _bytes Returns byte array if true otherwise string.
+     * @return {String|Array} Decompressed string or byte array.
+     */
+    var decompress = function(input, _bytes) {
+        var sstart, dstart = [], slen,
+            src = 0, dst = 0,
+            cpy, copymap,
+            copymask = 1 << (NBBY - 1),
+            mlen, offset,
+            i, bytes, get;
+
+        // Using byte array or not.
+        if(typeof input.buffer != "undefined") {
+            sstart = input;
+            bytes = true;
+        } else {
+            sstart = toByteArray(input);
+            bytes = false;
+        }
+
+        // Default output string result.
+        if(typeof(_bytes) == 'undefined')
+            bytes = false;
+        else
+            bytes = _bytes;
+
+        slen = sstart.length;
+
+        get = function() {
+            if(bytes) {
+                return Uint8Array.from(dstart);
+            }
+            else {
+                // Decompressed string.
+                for(i = 0; i < dst; i++)
+                    dstart[i] = String.fromCharCode(dstart[i]);
+
+                return dstart.join('')
+            }
+        };
+
+        while (src < slen) {
+            if ((copymask <<= 1) == (1 << NBBY)) {
+                copymask = 1;
+                copymap = sstart[src++];
+            }
+            if (copymap & copymask) {
+                mlen = (sstart[src] >> (NBBY - MATCH_BITS)) + MATCH_MIN;
+                offset = ((sstart[src] << NBBY) | sstart[src + 1]) & OFFSET_MASK;
+                src += 2;
+                if ((cpy = dst - offset) >= 0)
+                    while (--mlen >= 0)
+                        dstart[dst++] = dstart[cpy++];
+                else
+                    /*
+                     * offset before start of destination buffer
+                     * indicates corrupt source data
+                     */
+                    return get();
+            } else {
+                dstart[dst++] = sstart[src++];
+            }
+        }
+
+        return get();
+    };
+
+    return {
+        pack: compress,
+        unpack: decompress
+    }
+})();
 
 // LZ4 THANKS TO: https://github.com/Benzinga/lz4js
 UraniumJS.LZ4 = (function () {
@@ -71,32 +548,51 @@ UraniumJS.LZ4 = (function () {
     }
     // Reads a 64-bit little-endian integer from an array.
     util.readU64 = function readU64(b, n) {
+        n = (n|0)>>>0;
         var x = 0;
-        x |= b[n++] << 0;
-        x |= b[n++] << 8;
-        x |= b[n++] << 16;
-        x |= b[n++] << 24;
-        x |= b[n++] << 32;
-        x |= b[n++] << 40;
-        x |= b[n++] << 48;
-        x |= b[n++] << 56;
+        x |= b[n|0] << 0;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 8;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 16;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 24;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 32;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 40;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 48;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 56;
+        n = (n+1|0)>>>0;
         return x;
     }
     // Reads a 32-bit little-endian integer from an array.
     util.readU32 = function readU32(b, n) {
+        n = (n|0)>>>0;
         var x = 0;
-        x |= b[n++] << 0;
-        x |= b[n++] << 8;
-        x |= b[n++] << 16;
-        x |= b[n++] << 24;
+        x |= b[n|0] << 0;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 8;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 16;
+        n = (n+1|0)>>>0;
+        x |= b[n|0] << 24;
+        n = (n+1|0)>>>0;
         return x;
     }
     // Writes a 32-bit little-endian integer from an array.
     util.writeU32 = function writeU32(b, n, x) {
-        b[n++] = (x >> 0) & 0xff;
-        b[n++] = (x >> 8) & 0xff;
-        b[n++] = (x >> 16) & 0xff;
-        b[n++] = (x >> 24) & 0xff;
+        n = (n|0)>>>0;
+        b[n|0] = (x >> 0) & 0xff;
+        n = (n+1|0)>>>0;
+        b[n|0] = (x >> 8) & 0xff;
+        n = (n+1|0)>>>0;
+        b[n|0] = (x >> 16) & 0xff;
+        n = (n+1|0)>>>0;
+        b[n|0] = (x >> 24) & 0xff;
+        n = (n+1|0)>>>0;
     }
     // Multiplies two numbers using 32-bit integer multiplication.
     // Algorithm from Emscripten.
@@ -155,49 +651,53 @@ UraniumJS.LZ4 = (function () {
         }
 
         function xxh16 (h, src, index) {
-            return [
+            return Uint32Array.of(
                 xxhapply(h[0], util.readU32(src, index + 0), prime2, 13, prime1),
                 xxhapply(h[1], util.readU32(src, index + 4), prime2, 13, prime1),
                 xxhapply(h[2], util.readU32(src, index + 8), prime2, 13, prime1),
                 xxhapply(h[3], util.readU32(src, index + 12), prime2, 13, prime1)
-            ];
+            );
         }
 
         function xxh32 (seed, src, index, len) {
-            var h, l;
-            l = len;
-            if (len >= 16) {
-                h = [
-                    seed + prime1 + prime2,
-                    seed + prime2,
-                    seed,
-                    seed - prime1
-                ];
 
-                while (len >= 16) {
+            seed = seed | 0;
+            index = (index | 0) >>> 0;
+            len = len | 0;
+
+            var h, l = len | 0;
+            if ((len|0) >= 16) {
+                h = Uint32Array.of(
+                    seed + prime1 + prime2 | 0,
+                    seed + prime2 | 0,
+                    seed | 0,
+                    seed - prime1 | 0
+                );
+
+                while ((len|0) >= 16) {
                     h = xxh16(h, src, index);
 
-                    index += 16;
-                    len -= 16;
+                    index = (index+16|0) >>> 0;
+                    len = len-16|0;
                 }
 
-                h = rotl32(h[0], 1) + rotl32(h[1], 7) + rotl32(h[2], 12) + rotl32(h[3], 18) + l;
+                h = rotl32(h[0], 1) + rotl32(h[1], 7) + rotl32(h[2], 12) + rotl32(h[3], 18) + l | 0;
             } else {
-                h = (seed + prime5 + len) >>> 0;
+                h = (seed + prime5 + len | 0) >>> 0;
             }
 
-            while (len >= 4) {
+            while ((len|0) >= 4) {
                 h = xxh4(h, src, index);
 
-                index += 4;
-                len -= 4;
+                index = (index+4 | 0) >>> 0;
+                len = len-4 | 0;
             }
 
-            while (len > 0) {
+            while ((len|0) > 0) {
                 h = xxh1(h, src, index);
 
-                index++;
-                len--;
+                index = (index+1|0) >>> 0;
+                len = len-1|0;
             }
 
             h = shiftxor32(util.imul(shiftxor32(util.imul(shiftxor32(h, 15), prime2), 13), prime3), 16);
@@ -255,8 +755,27 @@ UraniumJS.LZ4 = (function () {
     // Utility functions/primitives
     // --
 
+    function max_uint(a, b) {
+        a = (a | 0) & 0xFFFFFFFF;
+        b = (b | 0) & 0xFFFFFFFF;
+        return a > b ? b : a;
+    }
+    function min_uint(a, b) {
+        a = (a | 0) & 0xFFFFFFFF;
+        b = (b | 0) & 0xFFFFFFFF;
+        return a > b ? a : b;
+    }
     // Makes our hashtable. On older browsers, may return a plain array.
     function makeHashTable () {
+        try {
+            return new Uint32Array(hashSize|0);
+        } catch (error) {
+            return new Array(hashSize|0).fill(0);
+        }
+    }
+
+    // Clear hashtable.
+    function clearHashTable (table) {
         try {
             return new Uint32Array(hashSize);
         } catch (error) {
@@ -270,48 +789,48 @@ UraniumJS.LZ4 = (function () {
         }
     }
 
-    // Clear hashtable.
-    function clearHashTable (table) {
-        for (var i = 0; i < hashSize; i++) {
-            hashTable[i] = 0;
-        }
-    }
-
     // Makes a byte buffer. On older browsers, may return a plain array.
     function makeBuffer (size) {
+
+        size = size | 0;
+
         try {
-            return new Uint8Array(size);
+            return new Uint8Array(size|0);
         } catch (error) {
-            var buf = new Array(size);
-
-            for (var i = 0; i < size; i++) {
-                buf[i] = 0;
+            var buf = new Array(size|0);
+            for (var i = 0; (i|0) < (size|0); i=(i+1|0)>>>0) {
+                buf[i|0] = 0;
             }
-
             return buf;
         }
     }
 
     function sliceArray (array, start, end) {
+
+        start = start | 0;
+        end = end | 0;
+
         if (typeof array.buffer !== undefined) {
             if (Uint8Array.prototype.slice) {
-                return array.slice(start, end);
+                return array.slice(start|0, end|0);
             } else {
                 // Uint8Array#slice polyfill.
                 var len = array.length;
 
                 // Calculate start.
                 start = start | 0;
-                start = (start < 0) ? Math.max(len + start, 0) : Math.min(start, len);
+                start = (start < 0) ? max_uint(len + start, 0) : min_uint(start, len);
 
                 // Calculate end.
                 end = (end === undefined) ? len : end | 0;
-                end = (end < 0) ? Math.max(len + end, 0) : Math.min(end, len);
+                end = (end < 0) ? max_uint(len + end, 0) : min_uint(end, len) | 0;
 
                 // Copy into new array.
-                var arraySlice = new Uint8Array(end - start);
-                for (var i = start, n = 0; i < end;) {
-                    arraySlice[n++] = array[i++];
+                var arraySlice = new Uint8Array(end - start | 0);
+                for (var i = start | 0, n = 0; (i|0) < (end|0);) {
+                    arraySlice[n|0] = array[i|0];
+                    n = (n+1|0)>>>0;
+                    i = (i+1|0)>>>0;
                 }
 
                 return arraySlice;
@@ -326,12 +845,12 @@ UraniumJS.LZ4 = (function () {
     // --
 
     // Calculates an upper bound for lz4 compression.
-    exports.compressBound = function compressBound (n) {
+    exports._compressBound = function compressBound (n) {
         return (n + (n / 255) + 16) | 0;
     };
 
     // Calculates an upper bound for lz4 decompression, by reading the data.
-    exports.decompressBound = function decompressBound (src) {
+    exports._decompressBound = function decompressBound (src) {
         var sIndex = 0;
 
         // Read magic number
@@ -339,22 +858,24 @@ UraniumJS.LZ4 = (function () {
             throw new Error('invalid magic number');
         }
 
-        sIndex += 4;
+        sIndex = (sIndex+4|0)>>>0;
 
         // Read descriptor
-        var descriptor = src[sIndex++];
+        var descriptor = src[sIndex|0] | 0;
+        sIndex = (sIndex+1|0)>>>0;
 
         // Check version
-        if ((descriptor & fdVersionMask) !== fdVersion) {
+        if ((descriptor & fdVersionMask | 0) != (fdVersion | 0)) {
             throw new Error('incompatible descriptor version ' + (descriptor & fdVersionMask));
         }
 
         // Read flags
-        var useBlockSum = (descriptor & fdBlockChksum) !== 0;
-        var useContentSize = (descriptor & fdContentSize) !== 0;
+        var useBlockSum = (descriptor & fdBlockChksum | 0) != 0;
+        var useContentSize = (descriptor & fdContentSize | 0) != 0;
 
         // Read block size
-        var bsIdx = (src[sIndex++] >> bsShift) & bsMask;
+        var bsIdx = (src[sIndex|0] >> bsShift) & bsMask;
+        sIndex = (sIndex+1|0)>>>0;
 
         if (bsMap[bsIdx] === undefined) {
             throw new Error('invalid block size ' + bsIdx);
@@ -364,34 +885,34 @@ UraniumJS.LZ4 = (function () {
 
         // Get content size
         if (useContentSize) {
-            return util.readU64(src, sIndex);
+            return util.readU64(src, sIndex|0);
         }
 
         // Checksum
-        sIndex++;
+        sIndex = (sIndex+1|0)>>>0;
 
         // Read blocks.
         var maxSize = 0;
         while (true) {
-            var blockSize = util.readU32(src, sIndex);
-            sIndex += 4;
+            var blockSize = util.readU32(src, sIndex|0);
+            sIndex = (sIndex+4|0)>>>0;
 
             if (blockSize & bsUncompressed) {
                 blockSize &= ~bsUncompressed;
-                maxSize += blockSize;
-            } else if (blockSize > 0) {
-                maxSize += maxBlockSize;
+                maxSize = maxSize+blockSize|0;
+            } else if ((blockSize|0) > 0) {
+                maxSize = maxSize+maxBlockSize|0;
             }
 
-            if (blockSize === 0) {
-                return maxSize;
+            if ((blockSize|0) == 0) {
+                return maxSize|0;
             }
 
             if (useBlockSum) {
-                sIndex += 4;
+                sIndex = (sIndex+4|0)>>>0;
             }
 
-            sIndex += blockSize;
+            sIndex = (sIndex+blockSize|0)>>>0;
         }
     };
 
@@ -399,81 +920,94 @@ UraniumJS.LZ4 = (function () {
     exports.makeBuffer = makeBuffer;
 
     // Decompresses a block of Lz4.
-    exports.decompressBlock = function decompressBlock (src, dst, sIndex, sLength, dIndex) {
+    exports._decompressBlock = function decompressBlock (src, dst, sIndex, sLength, dIndex) {
+
+        sIndex = sIndex | 0;
+        sLength = sLength | 0;
+        dIndex = dIndex | 0;
+
         var mLength, mOffset, sEnd, n, i;
         var hasCopyWithin = dst.copyWithin !== undefined && dst.fill !== undefined;
 
         // Setup initial state.
-        sEnd = sIndex + sLength;
+        sEnd = sIndex + sLength | 0;
 
         // Consume entire input block.
-        while (sIndex < sEnd) {
-            var token = src[sIndex++];
+        while ((sIndex|0) < (sEnd|0)) {
+            var token = src[sIndex|0]|0;
+            sIndex = sIndex + 1 | 0;
 
             // Copy literals.
-            var literalCount = (token >> 4);
-            if (literalCount > 0) {
+            var literalCount = token >> 4;
+            if ((literalCount|0) > 0) {
                 // Parse length.
-                if (literalCount === 0xf) {
+                if ((literalCount|0) == 0xf) {
                     while (true) {
-                        literalCount += src[sIndex];
-                        if (src[sIndex++] !== 0xff) {
+                        literalCount = literalCount+src[sIndex|0]|0;
+                        if ((src[sIndex|0]|0) != 0xff) {
+                            sIndex = sIndex + 1 | 0;
                             break;
                         }
                     }
                 }
 
                 // Copy literals
-                for (n = sIndex + literalCount; sIndex < n;) {
-                    dst[dIndex++] = src[sIndex++];
+                for (n = sIndex + literalCount | 0; (sIndex|0) < (n|0);) {
+                    dst[dIndex|0] = (src[sIndex|0] | 0) >>> 0;
+                    dIndex = dIndex + 1 | 0;
+                    sIndex = sIndex + 1 | 0;
                 }
             }
 
-            if (sIndex >= sEnd) {
+            if ((sIndex|0) >= (sEnd|0)) {
                 break;
             }
 
             // Copy match.
-            mLength = (token & 0xf);
+            mLength = token & 0xf;
 
             // Parse offset.
-            mOffset = src[sIndex++] | (src[sIndex++] << 8);
-
+            mOffset = src[sIndex|0] | (src[sIndex+1|0] << 8);
+            sIndex = (sIndex+2|0)>>>0
             // Parse length.
-            if (mLength === 0xf) {
+            if ((mLength|0) == 0xf) {
                 while (true) {
-                    mLength += src[sIndex];
-                    if (src[sIndex++] !== 0xff) {
+                    mLength = mLength+src[sIndex|0]|0;
+                    if ((src[sIndex|0]|0) != 0xff) {
+                        sIndex = (sIndex+1|0)>>>0
                         break;
                     }
+                    sIndex = (sIndex+1|0)>>>0
                 }
             }
 
-            mLength += minMatch;
+            mLength = mLength+minMatch|0;
 
             // Copy match
             // prefer to use typedarray.copyWithin for larger matches
             // NOTE: copyWithin doesn't work as required by LZ4 for overlapping sequences
             // e.g. mOffset=1, mLength=30 (repeach char 30 times)
             // we special case the repeat char w/ array.fill
-            if (hasCopyWithin && mOffset === 1) {
-                dst.fill(dst[dIndex - 1] | 0, dIndex, dIndex + mLength);
-                dIndex += mLength;
-            } else if (hasCopyWithin && mOffset > mLength && mLength > 31) {
-                dst.copyWithin(dIndex, dIndex - mOffset, dIndex - mOffset + mLength);
-                dIndex += mLength;
+            if (hasCopyWithin && (mOffset|0) == 1) {
+                dst.fill(dst[dIndex - 1 | 0] | 0, dIndex | 0, dIndex + mLength | 0);
+                dIndex = dIndex+mLength | 0;
+            } else if (hasCopyWithin && (mOffset|0) > (mLength|0) && (mLength|0) > 31) {
+                dst.copyWithin(dIndex | 0, dIndex - mOffset | 0, dIndex - mOffset + mLength | 0);
+                dIndex = dIndex+mLength | 0;
             } else {
-                for (i = dIndex - mOffset, n = i + mLength; i < n;) {
-                    dst[dIndex++] = dst[i++] | 0;
+                for (i = dIndex - mOffset | 0, n = i + mLength | 0; (i|0) < (n|0);) {
+                    dst[dIndex| 0] = (dst[i| 0] | 0) >>> 0;
+                    dIndex = (dIndex+1|0)>>>0
+                    i = (i+1|0)>>>0
                 }
             }
         }
 
-        return dIndex;
+        return (dIndex | 0) >>> 0;
     };
 
     // Compresses a block with Lz4.
-    exports.compressBlock = function compressBlock (src, dst, sIndex, sLength, hashTable) {
+    exports._compressBlock = function compressBlock (src, dst, sIndex, sLength, hashTable) {
         var mIndex, mAnchor, mLength, mOffset, mStep;
         var literalCount, dIndex, sEnd, n;
 
@@ -540,7 +1074,7 @@ UraniumJS.LZ4 = (function () {
                 }
 
                 // Write literals.
-                for (var i = 0; i < literalCount; i++) {
+                for (var i = 0; (i|0) < (literalCount|0); i=i+1|0) {
                     dst[dIndex++] = src[mAnchor + i];
                 }
 
@@ -562,7 +1096,7 @@ UraniumJS.LZ4 = (function () {
         }
 
         // Nothing was encoded.
-        if (mAnchor === 0) {
+        if ((mAnchor|0) == 0) {
             return 0;
         }
 
@@ -589,7 +1123,7 @@ UraniumJS.LZ4 = (function () {
     };
 
     // Decompresses a frame of Lz4 data.
-    exports.decompressFrame = function decompressFrame (src, dst) {
+    exports._decompressFrame = function decompressFrame (src, dst) {
         var useBlockSum, useContentSum, useContentSize, descriptor;
         var sIndex = 0;
         var dIndex = 0;
@@ -602,8 +1136,8 @@ UraniumJS.LZ4 = (function () {
         sIndex += 4;
 
         // Read descriptor
-        descriptor = src[sIndex++];
-
+        descriptor = src[sIndex|0];
+        sIndex = (sIndex+1|0)>>>0;
         // Check version
         if ((descriptor & fdVersionMask) !== fdVersion) {
             throw new Error('incompatible descriptor version');
@@ -615,7 +1149,8 @@ UraniumJS.LZ4 = (function () {
         useContentSize = (descriptor & fdContentSize) !== 0;
 
         // Read block size
-        var bsIdx = (src[sIndex++] >> bsShift) & bsMask;
+        var bsIdx = (src[sIndex|0] >> bsShift) & bsMask;
+        sIndex = (sIndex+1|0)>>>0;
 
         if (bsMap[bsIdx] === undefined) {
             throw new Error('invalid block size');
@@ -626,14 +1161,14 @@ UraniumJS.LZ4 = (function () {
             sIndex += 8;
         }
 
-        sIndex++;
+        sIndex = (sIndex+1|0)>>>0;
 
         // Read blocks.
         while (true) {
             var compSize;
 
-            compSize = util.readU32(src, sIndex);
-            sIndex += 4;
+            compSize = util.readU32(src, sIndex|0);
+            sIndex = (sIndex+4|0)>>>0;
 
             if (compSize === 0) {
                 break;
@@ -641,7 +1176,7 @@ UraniumJS.LZ4 = (function () {
 
             if (useBlockSum) {
                 // TODO: read block checksum
-                sIndex += 4;
+                sIndex = (sIndex+4|0)>>>0;
             }
 
             // Check if block is compressed
@@ -650,26 +1185,28 @@ UraniumJS.LZ4 = (function () {
                 compSize &= ~bsUncompressed;
 
                 // Copy uncompressed data into destination buffer.
-                for (var j = 0; j < compSize; j++) {
-                    dst[dIndex++] = src[sIndex++];
+                for (var j = 0; j < compSize; j=(j+1|0)>>>0) {
+                    dst[dIndex|0] = src[sIndex|0];
+                    dIndex = (dIndex+1|0)>>>0;
+                    sIndex = (sIndex+1|0)>>>0;
                 }
             } else {
                 // Decompress into blockBuf
-                dIndex = exports.decompressBlock(src, dst, sIndex, compSize, dIndex);
-                sIndex += compSize;
+                dIndex = exports._decompressBlock(src, dst, sIndex|0, compSize|0, dIndex|0);
+                sIndex = (sIndex+compSize|0)>>>0;
             }
         }
 
         if (useContentSum) {
             // TODO: read content checksum
-            sIndex += 4;
+            sIndex = (sIndex+4|0)>>>0;
         }
 
-        return dIndex;
+        return (dIndex|0)>>>0;
     };
 
     // Compresses data to an Lz4 frame.
-    exports.compressFrame = function compressFrame (src, dst) {
+    exports._compressFrame = function compressFrame (src, dst) {
         var dIndex = 0;
 
         // Write magic number.
@@ -693,33 +1230,33 @@ UraniumJS.LZ4 = (function () {
         clearHashTable(hashTable);
 
         // Split input into blocks and write.
-        while (remaining > 0) {
+        while ((remaining|0) > 0) {
             var compSize = 0;
             var blockSize = remaining > maxBlockSize ? maxBlockSize : remaining;
 
-            compSize = exports.compressBlock(src, blockBuf, sIndex, blockSize, hashTable);
+            compSize = exports._compressBlock(src, blockBuf, sIndex, blockSize, hashTable);
 
-            if (compSize > blockSize || compSize === 0) {
+            if ((compSize|0) > (blockSize|0) || compSize === 0) {
                 // Output uncompressed.
                 util.writeU32(dst, dIndex, 0x80000000 | blockSize);
                 dIndex += 4;
 
-                for (var z = sIndex + blockSize; sIndex < z;) {
-                    dst[dIndex++] = src[sIndex++];
+                for (var z = sIndex + blockSize | 0; (sIndex|0) < (z|0);) {
+                    dst[dIndex++] = src[sIndex++]|0;
                 }
 
-                remaining -= blockSize;
+                remaining -= blockSize|0;
             } else {
                 // Output compressed.
                 util.writeU32(dst, dIndex, compSize);
-                dIndex += 4;
+                dIndex += 4|0;
 
-                for (var j = 0; j < compSize;) {
-                    dst[dIndex++] = blockBuf[j++];
+                for (var j = 0; (j|0) < (compSize|0);) {
+                    dst[dIndex++] = blockBuf[j++]|0;
                 }
 
-                sIndex += blockSize;
-                remaining -= blockSize;
+                sIndex += blockSize|0;
+                remaining -= blockSize|0;
             }
         }
 
@@ -737,16 +1274,16 @@ UraniumJS.LZ4 = (function () {
         var dst, size;
 
         if (maxSize === undefined) {
-            maxSize = exports.decompressBound(src);
+            maxSize = exports._decompressBound(src);
         }
         dst = exports.makeBuffer(maxSize);
-        size = exports.decompressFrame(src, dst);
+        size = exports._decompressFrame(src, dst);
 
         if (size !== maxSize) {
             dst = sliceArray(dst, 0, size);
         }
 
-        return dst;
+        return Uint8Array.from(dst);
     };
 
     // Compresses a buffer to an Lz4 frame. maxSize is optional; if not provided,
@@ -756,17 +1293,17 @@ UraniumJS.LZ4 = (function () {
         var dst, size;
 
         if (maxSize === undefined) {
-            maxSize = exports.compressBound(src.length);
+            maxSize = exports._compressBound(src.length);
         }
 
         dst = exports.makeBuffer(maxSize);
-        size = exports.compressFrame(src, dst);
+        size = exports._compressFrame(src, dst);
 
         if (size !== maxSize) {
             dst = sliceArray(dst, 0, size);
         }
 
-        return dst;
+        return Uint8Array.from(dst);
     };
 
     return exports;
@@ -903,8 +1440,8 @@ UraniumJS.utils.unescape = function (string) {
 
 UraniumJS.prototype.encode = function(desired_output) {
 
-    desired_output = desired_output || "String";
-    var string_output = Boolean(desired_output == "String");
+    desired_output = ""+desired_output;
+
     var i = 0, j = 0;    // i for raw, j for encoded
     var size = (this.inputLength * 8 | 0) % 13 | 0;       // for the malloc
     var workspace = 0; // bits holding bin
@@ -913,7 +1450,14 @@ UraniumJS.prototype.encode = function(desired_output) {
     var c = 0;
 
     if ((this.inputLength|0) == 0) {
-        return string_output ? "~": Uint8Array.of(this.TILD_CHAR_CODE);
+        switch (desired_output.replaceAll("-", "").toUpperCase()) {
+            case "UINT8ARRAY":
+                return Uint8Array.of(this.TILD_CHAR_CODE);
+            case "BASE64":
+                return UraniumJS.BASE64.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
+            default: // BASE92
+                return UraniumJS.UTF8.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
+        }
     }
 
     // precalculate how much space we need to malloc
@@ -991,15 +1535,20 @@ UraniumJS.prototype.encode = function(desired_output) {
         results[j|0] = c & 0xFF;
     }
 
-    return string_output ? UraniumJS.UTF8.fromByteArray(results.subarray(0, results.length|0)) : results.slice(0, results.length|0);
+    switch (desired_output.replaceAll("-", "").toUpperCase()) {
+        case "UINT8ARRAY":
+            return results.slice(0, results.length|0);
+        case "BASE64":
+            return UraniumJS.BASE64.fromUint8Array(results.slice(0, results.length|0));
+        default: // BASE92
+            return UraniumJS.UTF8.fromUint8Array(results.slice(0, results.length|0));
+    }
 };
 
 
 UraniumJS.prototype.decode = function(desired_output) {
 
-    desired_output = desired_output || "String";
-    var string_output = Boolean(desired_output == "String");
-
+    desired_output = ""+desired_output;
     var i = 0, j = 0, b1 = 0, b2 = 0;
     var workspace = 0;
     var wssize = 0
@@ -1009,12 +1558,26 @@ UraniumJS.prototype.decode = function(desired_output) {
 
     // handle small cases first
     if ((this.getCharCodeAt(0) - this.TILD_CHAR_CODE | 0) == 0 || (this.inputLength|0) == 0){
-        return string_output ? "~": Uint8Array.of(this.TILD_CHAR_CODE);
+        switch (desired_output.replaceAll("-", "").toUpperCase()) {
+            case "UTF8": // BASE92
+                return UraniumJS.UTF8.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
+            case "BASE64":
+                return UraniumJS.BASE64.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
+            default:
+                return Uint8Array.of(this.TILD_CHAR_CODE);
+        }
     }
 
     // this case does not fit the specs
     if ((this.inputLength|0) < 2) {
-        return string_output ? "": new Uint8Array(0);
+        switch (desired_output.replaceAll("-", "").toUpperCase()) {
+            case "UTF8": // BASE92
+                return UraniumJS.UTF8.fromUint8Array(Uint8Array.of());
+            case "BASE64":
+                return UraniumJS.BASE64.fromUint8Array(Uint8Array.of());
+            default:
+                return Uint8Array.of();
+        }
     }
 
     // handle pairs of chars
@@ -1045,215 +1608,184 @@ UraniumJS.prototype.decode = function(desired_output) {
         }
     }
 
-    return string_output ? UraniumJS.UTF8.fromByteArray(res.subarray(0, res.length|0)): res.slice(0, res.length|0);
-};
-
-/*
- * The MIT License (MIT)
- * Copyright © 2017 Nicolas Froidure (https://github.com/nfroidure/utf-8)
- * Copyright © 2022 Affolter Matias
-*/
-
-var UTF8 = function(){
-    if (!(this instanceof UTF8)) {
-        return new UTF8();
+    switch (desired_output.replaceAll("-", "").toUpperCase()) {
+        case "UTF8":
+            return UraniumJS.UTF8.fromUint8Array(res.slice(0, res.length|0));
+        case "BASE64":
+            return UraniumJS.BASE64.fromUint8Array(res.slice(0, res.length|0));
+        default:  // UINT8ARRAY
+            return res.slice(0, res.length|0);
     }
 };
 
-UTF8.prototype._BYTE_MASKS_CHAR_LENGTH = Uint8Array.of(0b0, 0b1111111, 0b11000000, 0b11100000, 0b11110000);
-UTF8.prototype._BYTE_MASKS_CHAR_CODE = Uint32Array.of(0, 128, 2048, 65536, 2097152);
-
-UTF8.prototype._getCharLength = function(byte) {
-
-    if (this._BYTE_MASKS_CHAR_LENGTH[4] == (byte & this._BYTE_MASKS_CHAR_LENGTH[4])) {
-        return 4;
-    } else if (this._BYTE_MASKS_CHAR_LENGTH[3] == (byte & this._BYTE_MASKS_CHAR_LENGTH[3])) {
-        return 3;
-    } else if (this._BYTE_MASKS_CHAR_LENGTH[2] == (byte & this._BYTE_MASKS_CHAR_LENGTH[2])) {
-        return 2;
-    } else if (byte == (byte & this._BYTE_MASKS_CHAR_LENGTH[1])) {
-        return 1;
-    }else {
-        return 0;
+var BASE64 = function(){
+    if (!(this instanceof BASE64)) {
+        return new BASE64();
     }
-};
-UTF8.prototype._getBytesForCharCode = function (cc){
 
-    if (cc < this._BYTE_MASKS_CHAR_CODE[1]) {
-        return 1;
-    } else if (cc < this._BYTE_MASKS_CHAR_CODE[2]) {
-        return 2;
-    } else if (cc < this._BYTE_MASKS_CHAR_CODE[3]) {
-        return 3;
-    } else if (cc < this._BYTE_MASKS_CHAR_CODE[4]) {
-        return 4;
-    }else {
-        throw new Error('CharCode ' + cc + ' cannot be encoded with UTF8.');
-    }
+    this.CHUNCK_LENGTH_ = BASE64.config.CHUNCK_LENGTH;
+    this.BASE64ABCCC_ = BASE64.config.BASE64ABCCC;
+    this.B64C_ = BASE64.config.B64C;
+    this.B64EC_ = BASE64.config.B64EC;
+    this.B64CL_ = BASE64.config.B64CL;
 };
 
-UTF8.prototype._setBytesFromCharCode = function (charCode, bytes, byteOffset, neededBytes) {
-    charCode = charCode | 0;
-    bytes = bytes || [];
-    byteOffset = byteOffset | 0;
-    neededBytes = neededBytes || this._getBytesForCharCode(charCode);
-    // Setting the charCode as it to bytes if the byte length is 1
-    if (1 == neededBytes) {
-        bytes[byteOffset] = charCode;
-    } else {
-        // Computing the first byte
-        bytes[byteOffset++] =
-            (parseInt('1111'.slice(0, neededBytes), 2) << (8 - neededBytes)) +
-            (charCode >>> (--neededBytes * 6));
-        // Computing next bytes
-        for (; neededBytes > 0; ) {
-            bytes[byteOffset++] = ((charCode >>> (--neededBytes * 6)) & 0x3f) | 0x80;
-        }
+Object.defineProperty(BASE64.prototype, 'CHUNCK_LENGTH', {
+    get: function() { return this.CHUNCK_LENGTH_ | 0; }
+});
+Object.defineProperty(BASE64.prototype, 'BASE64ABCCC_E', {
+    get: function() {
+        return function (i){
+            return this.BASE64ABCCC_[i|0] & 0xFF;
+        };
     }
-    return bytes;
-};
+});
+Object.defineProperty(BASE64.prototype, 'B64C_E', {
+    get: function() {
+        return function (i){
+            return this.B64C_[i|0] & 0xFF;
+        };
+    }
+});
+Object.defineProperty(BASE64.prototype, 'B64EC', {
+    get: function() { return this.B64EC_ | 0; }
+});
+Object.defineProperty(BASE64.prototype, 'B64CL', {
+    get: function() { return this.B64CL_ | 0; }
+});
 
-UTF8.prototype.toByteArray = function(string, bytes, byteOffset, byteLength, strict) {
-    string = string || '';
-    bytes = bytes || [];
-    byteOffset = byteOffset | 0;
-    byteLength =
-        'number' === typeof byteLength ? byteLength : bytes.byteLength || Infinity;
-    for (var i = 0, j = string.length; i < j; i++) {
-        var neededBytes = this._getBytesForCharCode(string[i].codePointAt(0));
-        if (strict && byteOffset + neededBytes > byteLength) {
-            throw new Error(
-                'Not enought bytes to encode the char "' +
-                string[i] +
-                '" at the offset "' +
-                byteOffset +
-                '".'
-            );
-        }else {
-            this._setBytesFromCharCode(
-                string[i].codePointAt(0),
-                bytes,
-                byteOffset,
-                neededBytes,
-                strict
-            );
-            byteOffset += neededBytes;
-        }
+
+BASE64.config = {};
+BASE64.config.BASE64ABCCC = Uint8Array.of(65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 43, 47);
+BASE64.config.CHUNCK_LENGTH = 256;
+BASE64.config.B64EC = 255;
+BASE64.config.B64C = Uint8Array.of(255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 62, 255, 255, 255, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 255, 255, 255, 0, 255, 255, 255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 255, 255, 255, 255, 255, 255, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51);
+BASE64.config.B64CL = 123;
+
+BASE64.prototype.fromUint8Array = function (bytes) {
+    "use strict";
+    var i = 2, j = 0;
+    var l = bytes.length | 0;
+
+    var k = l % 3 | 0;
+    var n = Math.floor(l / 3) * 4 + (k && k + 1) | 0;
+    var N = Math.ceil(l / 3) * 4 | 0;
+    var result = new Uint8Array(N|0);
+
+    for (i = 2, j = 0; (i|0) < (l|0); i = (i+3|0)>>>0, j = (j+4|0)>>>0) {
+        result.set(Uint8Array.of(
+            this.BASE64ABCCC_E(bytes[i - 2 | 0] >> 2) & 0xFF,
+            this.BASE64ABCCC_E(((bytes[i - 2 | 0] & 0x03) << 4) | (bytes[i - 1 | 0] >> 4)) & 0xFF,
+            this.BASE64ABCCC_E(((bytes[i - 1 | 0] & 0x0F) << 2) | (bytes[i] >> 6)) & 0xFF,
+            this.BASE64ABCCC_E(bytes[i|0] & 0x3F) & 0xFF
+        ), j|0);
     }
-    return bytes;
-};
-UTF8.prototype._getCharCode = function(bytes, byteOffset, charLength) {
-    var charCode = 0,
-        mask = '';
-    byteOffset = byteOffset || 0;
-    // validate that the array has at least one byte in it
-    if (bytes.length - byteOffset <= 0) {
-        throw new Error('No more characters remaining in array.');
+    if ((i|0) == (l + 1 | 0)) { // 1 octet yet to write
+        result[j|0] = this.BASE64ABCCC_E(bytes[i - 2 | 0] >> 2) & 0xFF;
+        result[j+1|0] = this.BASE64ABCCC_E((bytes[i - 2 | 0] & 0x03) << 4) & 0xFF;
+        result[j+2|0] = "=".charCodeAt(0) & 0xFF;
+        result[j+3|0] = "=".charCodeAt(0) & 0xFF;
+        j = (j+4|0)>>>0;
     }
-    // Retrieve charLength if not given
-    charLength = charLength || this._getCharLength(bytes[byteOffset]);
-    if (charLength == 0) {
-        throw new Error(
-            bytes[byteOffset].toString(2) +
-            ' is not a significative' +
-            ' byte (offset:' +
-            byteOffset +
-            ').'
-        );
+    if ((i|0) == (l|0)) {
+        result[j|0] = this.BASE64ABCCC_E(bytes[i - 2 | 0] >> 2) & 0xFF;
+        result[j+1|0] = this.BASE64ABCCC_E(((bytes[i - 2 | 0] & 0x03) << 4) | (bytes[i - 1 | 0] >> 4)) & 0xFF;
+        result[j+2|0] = this.BASE64ABCCC_E((bytes[i - 1 | 0] & 0x0F) << 2) & 0xFF;
+        result[j+3|0] = "=".charCodeAt(0) & 0xFF;
     }
-    // Return byte value if charlength is 1
-    if (1 === charLength) {
-        return bytes[byteOffset];
+
+    var s = "";
+    var rl = result.length|0;
+    for(i = 0; (i|0) < (rl|0); i = (i+this.CHUNCK_LENGTH|0)>>>0){
+        s = s.concat(String.fromCharCode.apply(null, result.subarray(i|0, Math.min(i+this.CHUNCK_LENGTH|0, rl|0))));
     }
-    // validate that the array has enough bytes to make up this character
-    if (bytes.length - byteOffset < charLength) {
-        throw new Error(
-            'Expected at least ' + charLength + ' bytes remaining in array.'
-        );
-    }
-    // Test UTF8 integrity
-    mask = '00000000'.slice(0, charLength) + 1 + '00000000'.slice(charLength + 1);
-    if (bytes[byteOffset] & parseInt(mask, 2)) {
-        throw Error(
-            'Index ' +
-            byteOffset +
-            ': A ' +
-            charLength +
-            ' bytes' +
-            ' encoded char' +
-            ' cannot encode the ' +
-            (charLength + 1) +
-            'th rank bit to 1.'
-        );
-    }
-    // Reading the first byte
-    mask = '0000'.slice(0, charLength + 1) + '11111111'.slice(charLength + 1);
-    charCode += (bytes[byteOffset] & parseInt(mask, 2)) << (--charLength * 6);
-    // Reading the next bytes
-    while (charLength) {
-        if (
-            0x80 !== (bytes[byteOffset + 1] & 0x80) ||
-            0x40 === (bytes[byteOffset + 1] & 0x40)
-        ) {
-            throw Error(
-                'Index ' +
-                (byteOffset + 1) +
-                ': Next bytes of encoded char' +
-                ' must begin with a "10" bit sequence.'
-            );
-        }
-        charCode += (bytes[++byteOffset] & 0x3f) << (--charLength * 6);
-    }
-    return charCode;
-};
-UTF8.prototype.fromByteArray = function (bytes, byteOffset, byteLength, strict) {
-    var charLength,
-        chars = [];
-    byteOffset = byteOffset | 0;
-    byteLength =
-        'number' === typeof byteLength
-            ? byteLength
-            : bytes.byteLength || bytes.length;
-    for (; byteOffset < byteLength; byteOffset++) {
-        charLength = this._getCharLength(bytes[byteOffset]);
-        if (byteOffset + charLength > byteLength) {
-            if (strict) {
-                throw Error(
-                    'Index ' +
-                    byteOffset +
-                    ': Found a ' +
-                    charLength +
-                    ' bytes encoded char declaration but only ' +
-                    (byteLength - byteOffset) +
-                    ' bytes are available.'
-                );
-            }
-        } else {
-            chars.push(
-                String.fromCodePoint(this._getCharCode(bytes, byteOffset, charLength, strict))
-            );
-        }
-        byteOffset += charLength - 1;
-    }
-    return chars.join('');
-};
-UTF8.prototype.isNotUTF8 = function (bytes, byteOffset, byteLength) {
-    try {
-        this.fromByteArray(bytes, byteOffset, byteLength, true);
-    } catch (e) {
-        return true;
-    }
-    return false;
+
+    return s;
 }
 
-UraniumJS.UTF8 = new UTF8();
+BASE64.prototype._charCodeAt = function (s) {
+    return s.charCodeAt(0) & 0xFF;
+}
+BASE64.prototype._getBase64CodesBufferResults = function (buffer) {
+    return Uint8Array.of( (buffer >> 16) & 0xFF, (buffer >> 8) & 0xFF, buffer & 0xFF)
+}
+BASE64.prototype._getBase64CodesBufferResultsBy4 = function (buffer_1, buffer_2, buffer_3, buffer_4 ) {
+    return Uint8Array.of(
+        (buffer_1 >> 16) & 0xFF, (buffer_1 >> 8) & 0xFF, buffer_1 & 0xFF,
+        (buffer_2 >> 16) & 0xFF, (buffer_2 >> 8) & 0xFF, buffer_2 & 0xFF,
+        (buffer_3 >> 16) & 0xFF, (buffer_3 >> 8) & 0xFF, buffer_3 & 0xFF,
+        (buffer_4 >> 16) & 0xFF, (buffer_4 >> 8) & 0xFF, buffer_4 & 0xFF
+    );
+}
+BASE64.prototype._getBase64Code = function (char_code) {
+
+    char_code = (char_code | 0) & 0xFF;
+    if (((char_code|0)>>>0) >= ((this.B64CL|0)>>>0)) {throw new Error("Unable to parse base64 string.");}
+    var code = (this.B64C_E(char_code|0) | 0) >>> 0;
+    if (((code|0)>>>0) == ((this.B64EC|0)>>>0)) {throw new Error("Unable to parse base64 string.");}
+    return (code | 0) & 0xFF;
+}
+BASE64.prototype._getBase64CodesBuffer = function (str_char_codes) {
+    return (this._getBase64Code(str_char_codes[0]) << 18 | this._getBase64Code(str_char_codes[1]) << 12 | this._getBase64Code(str_char_codes[2]) << 6 | this._getBase64Code(str_char_codes[3]) | 0) >>> 0;
+}
+
+BASE64.prototype.toUint8Array = function (str) {
+
+    if ((str.length % 4 | 0) > 0) {
+        throw new Error("Unable to parse base64 string.");
+    }
+    var index = str.indexOf("=") | 0;
+    if ((index|0) > -1 && (index|0) < (str.length - 2 | 0)) {
+        throw new Error("Unable to parse base64 string.");
+    }
+
+    var str_char_code = Uint8ClampedArray.from(str.split("").map(function(s){ return this._charCodeAt(s)}));
+    var missingOctets = str.endsWith("==") ? 2 : str.endsWith("=") ? 1 : 0,
+        n = str.length | 0,
+        result = new Uint8ClampedArray(3 * (n / 4) | 0);
+
+    var str_char_code_splitted = new Uint8ClampedArray(16);
+    var i = 0, j = 0;
+    for (;(i+16|0) < (n|0); i = (i+16|0)>>>0, j = (j+12|0)>>>0) { // Single Operation Multiple Data (SIMD) up to 3x faster
+
+        str_char_code_splitted.set(str_char_code.subarray(i|0, i+16|0));
+        result.set(
+            this._getBase64CodesBufferResultsBy4(
+                this._getBase64CodesBuffer(str_char_code_splitted.subarray(0, 4)),
+                this._getBase64CodesBuffer(str_char_code_splitted.subarray(4, 8)),
+                this._getBase64CodesBuffer(str_char_code_splitted.subarray(8, 12)),
+                this._getBase64CodesBuffer(str_char_code_splitted.subarray(12, 16))
+            ), j|0);
+    }
+
+    for (;(i|0) < (n|0); i = (i+4|0)>>>0, j = (j+3|0)>>>0) { // Single Operation Single Data (normal)
+        result.set(this._getBase64CodesBufferResults(this._getBase64CodesBuffer(str_char_code.subarray(i|0, i+4|0))), j|0);
+    }
+
+    return result.slice(0, result.length - missingOctets | 0);
+}
+
+UraniumJS.BASE64 = new BASE64();
 
 UraniumJS.enrichString = function (it) {
-    return UraniumJS.utils.escape(UraniumJS.UTF8.fromByteArray(new UraniumJS(UraniumJS.LZ4.compress(UraniumJS.UTF8.toByteArray(UraniumJS.utils.stringify(it)))).encode("ArrayBuffer")));
+
+    it = UraniumJS.utils.stringify(it);
+    it = UraniumJS.LZJB.pack(it);
+    it = UraniumJS.LZ4.compress(it);
+    it = new UraniumJS(it).encode();
+    it = UraniumJS.utils.escape(it);
+    return it;
 };
 UraniumJS.stringDeplete = function (it) {
-    return UraniumJS.utils.parse(UraniumJS.UTF8.fromByteArray(UraniumJS.LZ4.decompress(new UraniumJS(UraniumJS.utils.unescape(it)).decode("ArrayBuffer"))));
+
+    it = UraniumJS.utils.unescape(it);
+    it  = new UraniumJS(it).decode();
+    it = UraniumJS.LZ4.decompress(it);
+    it = UraniumJS.LZJB.unpack(it, false);
+    it = UraniumJS.utils.parse(it);
+    return it;
 };
 
 window.UraniumJS = UraniumJS;
+
 export default UraniumJS;

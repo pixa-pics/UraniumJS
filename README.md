@@ -1,20 +1,25 @@
-# UraniumJS :radioactive: - LZP3 & LZJBR :heavy_check_mark: --> Base92 :skull: :nine: :two:
+# UraniumJS :radioactive: - LZ Compress & B92 Encode
+
+## It uses both LZP3 and LZJBR :heavy_check_mark: to enrich the entropy of a BASE92 :skull: text which fits into both JSON and JS...
 
 ![UraniumJS branding logo](https://raw.githubusercontent.com/pixa-pics/UraniumJS/main/Branding.png)
 
 > ENRICH a text into a simple and compressed BASE92 readable string &amp; DEPLETE it back!
-> Only 20.5 KB, yet it enables you to save up to 45% on any "UTF-8" and "UTF-16le" source text... 
+> Only ~50 KB, yet it enables you to save up to 66.67% on any "UTF-8" and "UTF-16le" source text... 
 
 DEMO : https://codepen.io/vipertechofficial/pen/JjBXJPR
 
 ### 1) E-A-S-Y!
-LZ4 is a very fast (Truly, trust me.) compression algorithm but when it comes to the idea of compressing a very complex string you probably don't want to get a strange and unreadable text which you may even not be able to save it inside a bracket in JavaScript because it could be using insane characters!
+
+LZP3 is a very fast (Truly, trust me.) compression algorithm and LZJBR makes us certainly gain 20% of weight after the great size reduction from the first algorithm used but when it comes to the idea of compressing a very complex string you probably don't want to get a strange and unreadable text which you may even not be able to save it inside a bracket in JavaScript because it could be using insane characters!
 
 ### 2) N-E-A-T!
+
 But look, why would someone with the proper tools beside of him just throw -25% of size inside getting to use an encoding in Base64 if it is to embded it inside JSON or a STRING which can truly handle more likely 92 characters without hurting itself into parsing or readability issues!
 
 ### 3) F-A-S-T!
-So, while you might get up to 45% lighter source file for web worker function, you might also be able to embded them directly inside your JS text file and load them quite fast! Or one may be using it to save translation file more kindly inside a .js ...
+
+So, while you might get up to 65% lighter source file for web worker function, you might also be able to embded them directly inside your JS text file and load them quite fast! Or one may be using it to save translation file more kindly inside a .js ...
 
 #### It doesn't use the following characters excepting space / \ " ' ` 
 
@@ -51,10 +56,12 @@ var text = `var t = function(base64) {
 
 /* STEP 2 --PROCESSING-- */
 
-var enriched = UraniumJS.enrichString(text); // 0-45% Lighter in average, in this case it is only 16% lighter because the source text is already small
-// RAW -> #K;tD,5o{w!c!)O0.,jkiP6H#A8jY@JMJx2~cw3=*0j2SX;_M=!&#?!§g:uXoG#:Jy=.Sr24.T~C7S0HJ6_Dn25C¡HjBiBP:I2^tk<V)qjtW,§1@I2T5V<§c~MmnA8[&!!¡L!!4 #jm~AV!_6F§¡~9a.KY>8?d!§,u¡nk9cirQ!!Zc¡ #mkWl_d.;%_MBf8yBF<vQ§3* VHa,MMIHmtDIV,e%bm~AVJYHnSuP{Eb!2{Z!%*J!BO#!fO2!:htB5azJN¡aOU5W5KoxB5ZiD{<zQ§3l@Pj(O¡U)BF:!!&aX!!MY!2ccTbkh 66LOdL},L#HHm2Cn23-hI~C¡xs.)%!&O##4_t§)O%P0E^1kZs!2Ja!&UAZ:#.O#%!!![Y!!H@!vJz#Gx|8a§W!;oI[!I2k[Vc6HQ%:&Wq8PJ8T<d96,*8jfA(<QF;PHfRO#4<!!F^!61VfQ%JO#K-!c1U!%j%.*ZS!-~lq9*U[@@!;pZom¡)~NF*+)3!H^>R~¡ ¡ mq*v6c.#0e!-8,wF!a!%r}Hm_<ixd1_v#Sfb!6!dEr!S6=~I8_;?Z<!l8QRPV9aX{(r](PHe§+v2!!!!!!
+var enriched = UraniumJS.enrichString(text); // 5-65% Lighter in average, in this case it is only 16% lighter because the source text is already small
+// RAW -> UraniumJS! H~=2;@N4wbkh75WjH9k35#3EZ<{Xc#cmq{vtYYw^~i].8xhBQNq}I|(1§k[#8F^2b{¡%+oyv>,U:Ouo3>Y s0v0v.-^a)2n,WzfTfN;@r[X1,Ez¡Kp4_ >ik -vcs<H23YuK^~RN4tkVFu-e>U]Fo0g{~N(=XI¡Nj7n7I¡U Aj_^DyWzv{nz:{g8m52Aj-.?VB6Q7p%WM)9-sKaU!d712ui40fdqpMBB|vOmK_hemN&=|¡Oe,A.seS§4fO_]9OvzV[RZ>zk7?9mDxU.;z§#{RI=¡X§4|@ph[![+|p 7~)Cm[METQDo¡v_?Rd1LUuaS6dh~YP§JelWRrlMm q=pro0# X)m%TDf¡¡?pCH%&%W m.OQ¡;7Twh0v|y%aE^J+8Az@2hL8WF-feu§c52>o0Y[6~~Y=dC!rk6#2D<3##¡W7[wIL(Rv=hiB§2ZH?UJf AgWTHA*#sY<jrEc=e^F*G5VWYa¡<l1§K(T+quYGY@SDtE!!Du
 
-var depleted = UraniumJS.stringDeplete("#K;tD,5o{w!c!)O0.,jkiP6H#A8jY@JMJx2~cw3=*0j2SX;_M=!&#?!§g:uXoG#:Jy=.Sr24.T~C7S0HJ6_Dn25C¡HjBiBP:I2^tk<V)qjtW,§1@I2T5V<§c~MmnA8[&!!¡L!!4 #jm~AV!_6F§¡~9a.KY>8?d!§,u¡nk9cirQ!!Zc¡ #mkWl_d.;%_MBf8yBF<vQ§3* VHa,MMIHmtDIV,e%bm~AVJYHnSuP{Eb!2{Z!%*J!BO#!fO2!:htB5azJN¡aOU5W5KoxB5ZiD{<zQ§3l@Pj(O¡U)BF:!!&aX!!MY!2ccTbkh 66LOdL},L#HHm2Cn23-hI~C¡xs.)%!&O##4_t§)O%P0E^1kZs!2Ja!&UAZ:#.O#%!!![Y!!H@!vJz#Gx|8a§W!;oI[!I2k[Vc6HQ%:&Wq8PJ8T<d96,*8jfA(<QF;PHfRO#4<!!F^!61VfQ%JO#K-!c1U!%j%.*ZS!-~lq9*U[@@!;pZom¡)~NF*+)3!H^>R~¡ ¡ mq*v6c.#0e!-8,wF!a!%r}Hm_<ixd1_v#Sfb!6!dEr!S6=~I8_;?Z<!l8QRPV9aX{(r](PHe§+v2!!!!!!"); // AS ORIGINAL
+
+var depleted = UraniumJS.stringDeplete("UraniumJS! H~=2;@N4wbkh75WjH9k35#3EZ<{Xc#cmq{vtYYw^~i].8xhBQNq}I|(1§k[#8F^2b{¡%+oyv>,U:Ouo3>Y s0v0v.-^a)2n,WzfTfN;@r[X1,Ez¡Kp4_ >ik -vcs<H23YuK^~RN4tkVFu-e>U]Fo0g{~N(=XI¡Nj7n7I¡U Aj_^DyWzv{nz:{g8m52Aj-.?VB6Q7p%WM)9-sKaU!d712ui40fdqpMBB|vOmK_hemN&=|¡Oe,A.seS§4fO_]9OvzV[RZ>zk7?9mDxU.;z§#{RI=¡X§4|@ph[![+|p 7~)Cm[METQDo¡v_?Rd1LUuaS6dh~YP§JelWRrlMm q=pro0# X)m%TDf¡¡?pCH%&%W m.OQ¡;7Twh0v|y%aE^J+8Az@2hL8WF-feu§c52>o0Y[6~~Y=dC!rk6#2D<3##¡W7[wIL(Rv=hiB§2ZH?UJf AgWTHA*#sY<jrEc=e^F*G5VWYa¡<l1§K(T+quYGY@SDtE!!Du
+"); // AS ORIGINAL
 // RAW -> var t = function(base64) {     "use strict";     return new Promise(function(resolve, reject) {         var img = new Image();         var is_png = base64.startsWith("data:image/png;");         img.onload = function() {                  var canvas = document.createElement("canvas");             canvas.width = img.naturalWidth || img.width;             canvas.height = img.naturalHeight || img.height;             var ctx = canvas.getContext("2d");             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);             resolve(canvas.toDataURL(is_png ? "image/png": "image/jpeg"));          };         img.onerror = function() { reject(); };         img.src = base64;     }); }; return t;
 ```
 

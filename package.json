@@ -1,25 +1,45 @@
 {
   "name": "uraniumjs",
-  "version": "1.0.0",
-  "description": "ENRICH a text into a simple and compressed BASE92 readable string & DEPLETE it back! It uses LZ4...",
-  "dependencies": {},
-  "devDependencies": {},
+  "version": "1.1.1",
+  "description": "ENRICH a text into a simple and compressed BASE92 readable string & DEPLETE it back! It uses LZP3 &+...",
+  "devDependencies": {
+    "async.js": "^0.9.5",
+    "tinyify": "^4.0.0"
+  },
   "build": {},
   "scripts": {},
   "author": "Affolter Matias",
   "keywords": [
-    "uranium", "js", "uraniumjs",
-    "enrich", "deplete", "string",
-    "base conversion", "inline",
-    "parse", "stringify",
-    "base92", "base64",
-    "base92 encode", "base92 decode",
-    "base92_encode", "base92_decode",
-    "encode", "decode",
-    "compress", "decompress",
-    "compress string", "decompress string",
-    "LZ4", "LZ4 compression", "LZ4 decompression" ,"LZ",
-    "UTF8", "UTF-8", "UTF16", "UTF-16le"
+    "uranium",
+    "js",
+    "uraniumjs",
+    "enrich",
+    "deplete",
+    "string",
+    "base conversion",
+    "inline",
+    "parse",
+    "stringify",
+    "base92",
+    "base64",
+    "base92 encode",
+    "base92 decode",
+    "base92_encode",
+    "base92_decode",
+    "encode",
+    "decode",
+    "compress",
+    "decompress",
+    "compress string",
+    "decompress string",
+    "LZP3","LZJBR",
+    "LZP3 compression",
+    "LZP3 decompression",
+    "LZ",
+    "UTF8",
+    "UTF-8",
+    "UTF16",
+    "UTF-16le"
   ],
   "license": "MIT",
   "repository": {
@@ -28,5 +48,8 @@
   },
   "engines": {
     "node": ">=0.8.0"
+  },
+  "dependencies": {
+    "core-js": "^3.27.1"
   }
 }

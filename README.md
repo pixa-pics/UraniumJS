@@ -65,6 +65,15 @@ var depleted = UraniumJS.stringDeplete("UraniumJS! H~=2;@N4wbkh75WjH9k35#3EZ<{Xc
 // RAW -> var t = function(base64) {     "use strict";     return new Promise(function(resolve, reject) {         var img = new Image();         var is_png = base64.startsWith("data:image/png;");         img.onload = function() {                  var canvas = document.createElement("canvas");             canvas.width = img.naturalWidth || img.width;             canvas.height = img.naturalHeight || img.height;             var ctx = canvas.getContext("2d");             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);             resolve(canvas.toDataURL(is_png ? "image/png": "image/jpeg"));          };         img.onerror = function() { reject(); };         img.src = base64;     }); }; return t;
 ```
 
+ALSO
+
+```JavaScript
+
+var pluto = UraniumJS.enrichObject({id: 0, sun: "true", strange: false, lights: "on", deaths: [888, 0.164]})
+var original = UraniumJS.depleteObject(pluto); // As original
+
+```
+
 ## How to use it with JavaScript function?
 
 ```JavaScript

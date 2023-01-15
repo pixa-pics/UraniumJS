@@ -1,4 +1,4 @@
-# UraniumJS :radioactive: - LZ Compress & B92 Encode
+# UraniumJS (~41kB) :radioactive: - LZ** Compress (-66.7%) ^ B92 Encode (-25% of B64)
 
 **LZP3 & LZJBR + BASE92 :heavy_check_mark: ENRICH or DEPLETE elements such as String, Object, and ArrayBuffer :skull:**
 
@@ -7,7 +7,7 @@
 ![UraniumJS branding logo](https://raw.githubusercontent.com/pixa-pics/UraniumJS/main/Branding.png) ![npm](https://img.shields.io/npm/dw/uraniumjs?label=NPM%20DOWNLOAD&logo=NPM)
 
 > ENRICH a text into a simple and compressed BASE92 readable string &amp; DEPLETE it back!
-> Only around 31 + 77 kB, yet it enables you to save up to 66.67% on any "UTF-8" and "UTF-16le" source text... 
+> Only around 41Kb on modern browser and 31 + 77 kB if you use the version with polyfills to make it compatible with older browser, yet it enables you to save up to 66.67% on any "UTF-8" and "UTF-16le" source text... And to saves once again 25% over Base64 encoding, it fits bracket string and JSON not using " or ' or { or } or $, meanwhile it use spaces when you store it on a web server where Gzip is installed by default for distributing content over http(s), you saves again over more than 15-20% because it is less hard to compress than very ugly texts.
 
 DEMO : [Go to codepen.io](https://codepen.io/vipertechofficial/pen/JjBXJPR) :sparkles:
 

@@ -1,6 +1,6 @@
 {
   "name": "uraniumjs",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "ENRICH a text into a simple and compressed BASE92 readable string & DEPLETE it back! It uses LZP3 &+...",
   "devDependencies": {
     "tinyify": "^4.0.0"

@@ -1,7 +1,7 @@
 {
   "name": "uraniumjs",
-  "version": "1.2.1",
-  "description": "ENRICH a text into a simple and compressed BASE92 readable string & DEPLETE it back! It uses LZP3 &+...",
+  "version": "1.2.2",
+  "description": "UraniumJS (~41kB) ☢️ - LZ** Compress (-66.7%) ^ B92 Encode (-25% of B64)",
   "devDependencies": {
     "tinyify": "^4.0.0"
   },

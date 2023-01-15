@@ -1,13 +1,15 @@
 # UraniumJS :radioactive: - LZ Compress & B92 Encode
 
-## LZP3 & LZJBR + BASE92 :heavy_check_mark: ENRICH or DEPLETE elements such as String, Object, and ArrayBuffer :skull: into text you can put inside ''
+**LZP3 & LZJBR + BASE92 :heavy_check_mark: ENRICH or DEPLETE elements such as String, Object, and ArrayBuffer :skull:**
 
-![UraniumJS branding logo](https://raw.githubusercontent.com/pixa-pics/UraniumJS/main/Branding.png)
+![MIT](https://img.shields.io/badge/license-MIT-green)
+
+![UraniumJS branding logo](https://raw.githubusercontent.com/pixa-pics/UraniumJS/main/Branding.png) ![npm](https://img.shields.io/npm/dw/uraniumjs?label=NPM%20DOWNLOAD&logo=NPM)
 
 > ENRICH a text into a simple and compressed BASE92 readable string &amp; DEPLETE it back!
-> Only ~60.8 KB, yet it enables you to save up to 66.67% on any "UTF-8" and "UTF-16le" source text... 
+> Only around 31 + 77 kB, yet it enables you to save up to 66.67% on any "UTF-8" and "UTF-16le" source text... 
 
-DEMO : https://codepen.io/vipertechofficial/pen/JjBXJPR
+DEMO : [Go to codepen.io](https://codepen.io/vipertechofficial/pen/JjBXJPR) :sparkles:
 
 ### 1) E-A-S-Y!
 
@@ -29,9 +31,16 @@ So, while you might get up to 65% lighter source file for web worker function, y
 
 ```JavaScript
 
-import UraniumJS from "./UraniumJS"; // In node.js
+import UraniumJS from "uraniumjs/index.min.js"; // In node.js only 41 kB
+
 /* OR */
-var UraniumJS = window.UraniumJS; // Use the minified version for browser (> safari 10 & > Chrome 51)
+
+// Use the minified 55.3 kB version within /browser/UraniumJS.min.js for browser (> safari 10 & > Chrome 80)
+var UraniumJS = window.UraniumJS; 
+    // You can add the minified 55.7 kB version within /browser/UraniumCompressJS.min.js for browser (> safari 10 & > Chrome 80)
+    // It will enable you to save up to 2/3 of the text size after compression if you install those modules as below :
+    UraniumJS.enrichFunctionCalls = window.UraniumJSEnrichFunctionCalls;
+    UraniumJS.depleteFunctionCalls = window.UraniumJSDepleteFunctionCalls;
 
 /* STEP 1 --INPUT-- */
 
@@ -73,10 +82,10 @@ var pluto = UraniumJS.enrichObject({id: 0, sun: "true", strange: false, lights: 
 var original = UraniumJS.depleteObject(pluto); // As original from an object converted into base92
 
 var isMyText = UraniumJS.enrichBuffer(Uint8Array.of(92, 64, 16, 8))
-var areMyNumbers = UraniumJS.depleteObject(isMyText); // As original from a buffer converted into base92
+var areMyNumbers = UraniumJS.depleteBuffer(isMyText); // As original from a buffer converted into base92
 
 var areMyBytes = UraniumJS.enrichBuffer(Uint8Array.from(areMyNumbers), true)
-var isMyArray = UraniumJS.depleteObject(areMyBytes, true); // As original from a buffer
+var isMyArray = UraniumJS.depleteBuffer(areMyBytes, true); // As original from a buffer
 
 ```
 
@@ -106,3 +115,4 @@ var sanitizeInlineImageFunction = new FunctionConstructor(depleted);
 **92 (Huh)? Compression? --> Enriching something in entropy/chaos aka densifying a raw material is the same concept... it encode certainety into such much surprise but a predictable way!**
 
 In information theory, the entropy of a random variable is the average level of "information", "surprise", or "uncertainty" inherent to the variable's possible outcomes. Enriched uranium is a type of uranium in which the percent composition of uranium-235 (written 235U) has been increased through the process of isotope separation. Isotope separation is the process of **concentrating specific isotopes** of a chemical element by removing other isotopes. 
+

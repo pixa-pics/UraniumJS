@@ -116,3 +116,9 @@ var sanitizeInlineImageFunction = new FunctionConstructor(depleted);
 
 In information theory, the entropy of a random variable is the average level of "information", "surprise", or "uncertainty" inherent to the variable's possible outcomes. Enriched uranium is a type of uranium in which the percent composition of uranium-235 (written 235U) has been increased through the process of isotope separation. Isotope separation is the process of **concentrating specific isotopes** of a chemical element by removing other isotopes. 
 
+![Branding of uraniumjs and utfzap](https://raw.githubusercontent.com/pixa-pics/UTFzap/main/urazap.png) 
+
+You may be interested in :
+
+https://www.npmjs.com/package/utf-zap
+

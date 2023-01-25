@@ -7,4 +7,6 @@ _UraniumJS.default.enrichFunctionCalls = _UraniumCompressJS.default.UraniumJSEnr
 _UraniumJS.default.depleteFunctionCalls = _UraniumCompressJS.default.UraniumJSDepleteFunctionCalls;
 if (typeof module != "undefined") {
   module.exports = _UraniumJS.default;
+}else {
+  window.UraniumJS = _UraniumJS.default;
 }

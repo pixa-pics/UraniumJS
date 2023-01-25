@@ -42,6 +42,13 @@ var UraniumJS = window.UraniumJS;
     UraniumJS.enrichFunctionCalls = window.UraniumJSEnrichFunctionCalls;
     UraniumJS.depleteFunctionCalls = window.UraniumJSDepleteFunctionCalls;
 
+/* STEP 0 --OPTIONAL ENCODER-- */
+import UTFzap from "utf-zap"; // only ~6.1Kb //This one isn't compliant to UTF-8/16 but it do the same as much as twice faster
+    UraniumJS.UTFX = new UTFzap();
+    
+import SuperJSONatural from "superjsonatural"; // only ~7.3Kb // This one isn't fully usual JSON but it do the same as much as twice faster and beyond if you use typed array a lot which it does support!
+    UraniumJS.JSONX = new SuperJSONatural();
+
 /* STEP 1 --INPUT-- */
 
 var text = `var t = function(base64) {

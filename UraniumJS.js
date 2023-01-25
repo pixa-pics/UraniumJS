@@ -210,13 +210,13 @@ var UraniumJS = function UraniumJS(data, base) {
         if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
             this.storage_input_ = data;
         } else if (typeof data == "string") {
-            this.storage_input_ = UraniumJS.UTF8.toUint8Array(data);
+            this.storage_input_ = UraniumJS.UTFX.toUint8Array(data);
         } else if (typeof data.buffer != "undefined" || data instanceof ArrayBuffer) {
             this.storage_input_ = new Uint8Array(data instanceof ArrayBuffer ? data : data.buffer);
         } else if(data instanceof Array){
             this.storage_input_ = Uint8Array.from(data);
         }else if(typeof data === "object"){
-            this.storage_input_ = JSON.stringify(data);
+            this.storage_input_ = UraniumJS.JSONX.stringify(data);
         }else {
             throw new TypeError(`attempted to parse failed`);
         }
@@ -233,7 +233,9 @@ var UraniumJS = function UraniumJS(data, base) {
     return this;
 };
 
+UraniumJS.JSONX = JSON;
 UraniumJS.UTF8 = new UTF8();
+UraniumJS.UTFX = UraniumJS.UTF8;
 UraniumJS.config = {};
 UraniumJS.config.TILD_CHAR_CODE = 126;
 UraniumJS.config.BACKSLASH_CHAR = String.fromCharCode(92);
@@ -302,10 +304,10 @@ UraniumJS.utils.onlyCharParsable = function (string) {
 };
 UraniumJS.utils.MAGIC_WORD = "UraniumJS! ";
 UraniumJS.utils.parse = function (string) {
-    return JSON.parse(UraniumJS.utils.onlyCharParsable(string));
+    return UraniumJS.JSONX.parse(UraniumJS.utils.onlyCharParsable(string));
 };
 UraniumJS.utils.stringify = function (string) {
-    return UraniumJS.utils.onlyCharPrintable(JSON.stringify(string));
+    return UraniumJS.utils.onlyCharPrintable(UraniumJS.JSONX.stringify(string));
 };
 UraniumJS.utils.escape = function (string) {
     string = string.replaceAll(UraniumJS.config.BACKSLASH_CHAR, " ");
@@ -337,7 +339,7 @@ UraniumJS.prototype.encode = function (desired_output) {
                 return UraniumJS.BASE64.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
             default:
                 // BASE92
-                return UraniumJS.UTF8.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
+                return UraniumJS.UTFX.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
         }
     }
 
@@ -406,7 +408,7 @@ UraniumJS.prototype.encode = function (desired_output) {
             return UraniumJS.BASE64.fromUint8Array(results.slice(0, results.length | 0));
         default:
             // BASE92
-            return UraniumJS.UTF8.fromUint8Array(results.slice(0, results.length | 0));
+            return UraniumJS.UTFX.fromUint8Array(results.slice(0, results.length | 0));
     }
 };
 UraniumJS.prototype.decode = function (desired_output) {
@@ -426,7 +428,7 @@ UraniumJS.prototype.decode = function (desired_output) {
         switch (desired_output.replaceAll("-", "").toUpperCase()) {
             case "UTF8":
                 // BASE92
-                return UraniumJS.UTF8.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
+                return UraniumJS.UTFX.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
             case "BASE64":
                 return UraniumJS.BASE64.fromUint8Array(Uint8Array.of(this.TILD_CHAR_CODE));
             default:
@@ -439,7 +441,7 @@ UraniumJS.prototype.decode = function (desired_output) {
         switch (desired_output.replaceAll("-", "").toUpperCase()) {
             case "UTF8":
                 // BASE92
-                return UraniumJS.UTF8.fromUint8Array(Uint8Array.of());
+                return UraniumJS.UTFX.fromUint8Array(Uint8Array.of());
             case "BASE64":
                 return UraniumJS.BASE64.fromUint8Array(Uint8Array.of());
             default:
@@ -474,9 +476,9 @@ UraniumJS.prototype.decode = function (desired_output) {
     }
     switch (desired_output.replaceAll("-", "").toUpperCase()) {
         case "UTF8":
-            return UraniumJS.UTF8.fromUint8Array(res.slice(0, res.length | 0));
+            return UraniumJS.UTFX.fromUint8Array(res.slice(0, res.length | 0));
         case "JS":
-            return JSON.stringify(res.slice(0, res.length | 0));
+            return UraniumJS.JSONX.stringify(res.slice(0, res.length | 0));
         case "BASE64":
             return UraniumJS.BASE64.fromUint8Array(res.slice(0, res.length | 0));
         default:
@@ -648,7 +650,7 @@ UraniumJS.enrichString = function (it, logs) {
     var initial_size = it.length;
     var s_parsing = Date.now();
     it = UraniumJS.utils.stringify(it);
-    it = UraniumJS.UTF8.toUint8Array(it);
+    it = UraniumJS.UTFX.toUint8Array(it);
     var s_compressing = Date.now();
     it = UraniumJS.withinEnrich(it);
     var s_encoding = Date.now();
@@ -669,7 +671,7 @@ UraniumJS.stringDeplete = function (it, logs) {
     var s_compressing = Date.now();
     it = UraniumJS.withinDeplete(it);
     var s_parsing = Date.now();
-    it = UraniumJS.UTF8.fromUint8Array(it);
+    it = UraniumJS.UTFX.fromUint8Array(it);
     it = UraniumJS.utils.parse(it);
     var s_ended = Date.now();
     var final_size = it.length;
@@ -680,13 +682,13 @@ UraniumJS.stringDeplete = function (it, logs) {
 };
 
 UraniumJS.enrichObject = function (o, logs) {
-    o = JSON.stringify(o);
+    o = UraniumJS.JSONX.stringify(o);
     return UraniumJS.enrichString(o, logs);
 };
 UraniumJS.objectDeplete = function (o, logs) {
 
     o = UraniumJS.stringDeplete(o, logs)
-    return JSON.parse(o);
+    return UraniumJS.JSONX.parse(o);
 };
 
 UraniumJS.enrichBuffer = function (it, base92, logs) {
@@ -722,8 +724,8 @@ UraniumJS.bufferDeplete = function (it, base92, logs) {
     return it;
 };
 
-if(module) {
+if(typeof module != "undefined") {
     module.exports = UraniumJS;
+}else {
+    window.UraniumJS = UraniumJS;
 }
-
-window.UraniumJS = UraniumJS;

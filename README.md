@@ -34,8 +34,8 @@ So, while you might get up to 65% lighter source file for web worker function, y
 import UraniumJS from "uraniumjs/UraniumJS.min.js"; // In node.js only around 18kB
 import UraniumCompressJS from "uraniumjs/UraniumCompressJS.min.js"; // In node.js only around 22kB
 
-// UraniumJS.enrichFunctionCalls = UraniumCompressJS.enrichFunctionCalls;
-// UraniumJS.UraniumJSDepleteFunctionCalls = UraniumCompressJS.UraniumJSDepleteFunctionCalls;;
+// UraniumJS.enrichFunctionCalls = UraniumCompressJS.UraniumJSEnrichFunctionCalls;
+// UraniumJS.UraniumJSDepleteFunctionCalls = UraniumCompressJS.UraniumJSDepleteFunctionCalls;
 
 /* OR */
 

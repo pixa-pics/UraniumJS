@@ -2127,12 +2127,14 @@ Lzp3 = function () {
 var UraniumJSEnrichFunctionCalls =  [Lzp3.compressFile, LzjbR.compressFile];
 var UraniumJSDepleteFunctionCalls =   [Lzp3.decompressFile, LzjbR.decompressFile];
 
-if(module) {
+if(typeof module != "undefined") {
     module.exports = {
         UraniumJSEnrichFunctionCalls: UraniumJSEnrichFunctionCalls,
         UraniumJSDepleteFunctionCalls: UraniumJSDepleteFunctionCalls
     };
+}else {
+    window.UraniumJSEnrichFunctionCalls = UraniumJSEnrichFunctionCalls;
+    window.UraniumJSDepleteFunctionCalls = UraniumJSDepleteFunctionCalls;
 }
 
-window.UraniumJSEnrichFunctionCalls = UraniumJSEnrichFunctionCalls;
-window.UraniumJSDepleteFunctionCalls = UraniumJSDepleteFunctionCalls;
+

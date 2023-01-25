@@ -1,7 +1,7 @@
 {
   "name": "uraniumjs",
-  "version": "1.4.0",
-  "description": "UraniumJS (~41kB) ☢️ - LZ** Compress (-66.7%) ^ B92 Encode (-25% of B64)",
+  "version": "1.5.0",
+  "description": "UraniumJS (~40kB) ☢️ - LZ** Compress (-66%) ^ B92 Encode (-25% of B64)",
   "devDependencies": {
     "tinyify": "^4.0.0"
   },

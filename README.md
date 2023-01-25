@@ -31,21 +31,22 @@ So, while you might get up to 65% lighter source file for web worker function, y
 
 ```JavaScript
 
-import UraniumJS from "uraniumjs/index.min.js"; // In node.js only 41 kB
+import UraniumJS from "uraniumjs/UraniumJS.min.js"; // In node.js only around 18kB
+import UraniumCompressJS from "uraniumjs/UraniumCompressJS.min.js"; // In node.js only around 22kB
+
+// UraniumJS.enrichFunctionCalls = UraniumCompressJS.enrichFunctionCalls;
+// UraniumJS.UraniumJSDepleteFunctionCalls = UraniumCompressJS.UraniumJSDepleteFunctionCalls;;
 
 /* OR */
 
-// Use the minified 55.3 kB version within /browser/UraniumJS.min.js for browser (> safari 10 & > Chrome 80)
+
 var UraniumJS = window.UraniumJS; 
-    // You can add the minified 55.7 kB version within /browser/UraniumCompressJS.min.js for browser (> safari 10 & > Chrome 80)
+    // You can add the minified 46kB version within /browser/UraniumCompressJS.min.js (55kB) for browser (> safari 10 & > Chrome 80)
     // It will enable you to save up to 2/3 of the text size after compression if you install those modules as below :
     UraniumJS.enrichFunctionCalls = window.UraniumJSEnrichFunctionCalls;
     UraniumJS.depleteFunctionCalls = window.UraniumJSDepleteFunctionCalls;
 
 /* STEP 0 --OPTIONAL ENCODER-- */
-import UTFzap from "utf-zap"; // only ~6.1Kb //This one isn't compliant to UTF-8/16 but it do the same as much as twice faster
-    UraniumJS.UTFX = new UTFzap();
-    
 import SuperJSONatural from "superjsonatural"; // only ~7.3Kb // This one isn't fully usual JSON but it do the same as much as twice faster and beyond if you use typed array a lot which it does support!
     UraniumJS.JSONX = new SuperJSONatural();
 

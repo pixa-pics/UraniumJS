@@ -1,3 +1,28 @@
+"use strict";
+
+require("core-js/modules/es.typed-array.of.js");
+require("core-js/modules/es.array-buffer.slice.js");
+require("core-js/modules/es.typed-array.uint8-array.js");
+require("core-js/modules/es.typed-array.at.js");
+require("core-js/modules/es.typed-array.fill.js");
+require("core-js/modules/esnext.typed-array.find-last.js");
+require("core-js/modules/esnext.typed-array.find-last-index.js");
+require("core-js/modules/es.typed-array.set.js");
+require("core-js/modules/es.typed-array.sort.js");
+require("core-js/modules/esnext.typed-array.to-reversed.js");
+require("core-js/modules/esnext.typed-array.to-sorted.js");
+require("core-js/modules/esnext.typed-array.with.js");
+require("core-js/modules/es.typed-array.uint32-array.js");
+require("core-js/modules/es.error.cause.js");
+require("core-js/modules/es.typed-array.from.js");
+require("core-js/modules/es.typed-array.uint8-clamped-array.js");
+require("core-js/modules/es.array-buffer.constructor.js");
+require("core-js/modules/es.json.stringify.js");
+require("core-js/modules/es.regexp.exec.js");
+require("core-js/modules/es.string.replace.js");
+require("core-js/modules/es.string.replace-all.js");
+require("core-js/modules/es.array.reverse.js");
+
 /*
  * The MIT License (MIT)
  * Copyright © 2017 Nicolas Froidure (https://github.com/nfroidure/utf-8)
